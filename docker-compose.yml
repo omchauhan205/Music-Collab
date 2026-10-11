@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: musiccollab-db
+    environment:
+      POSTGRES_DB: musiccollab
+      POSTGRES_USER: musiccollab
+      POSTGRES_PASSWORD: musiccollab
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U musiccollab -d musiccollab"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: musiccollab-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: musiccollab
+      DB_USER: musiccollab
+      DB_PASSWORD: musiccollab
+      JWT_SECRET: change-me-in-production-please-use-a-long-random-secret-key-0123456789abcdef
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:4173
+      STORAGE_TYPE: local
+      STORAGE_LOCATION: /var/data/uploads
+      SEED_ENABLED: "true"
+      SEED_DEFAULT_PASSWORD: Password@123
+    ports:
+      - "8080:8080"
+    volumes:
+      - uploads:/var/data/uploads
+
+volumes:
+  pgdata:
+  uploads:

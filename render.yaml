@@ -1,0 +1,71 @@
+databases:
+  - name: musiccollab-db
+    databaseName: musiccollab
+    user: musiccollab
+    plan: free
+
+services:
+  # ---- Backend API (Spring Boot, Docker) ----
+  - type: web
+    name: musiccollab-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DB_HOST
+        fromDatabase:
+          name: musiccollab-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: musiccollab-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: musiccollab-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: musiccollab-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: musiccollab-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://musiccollab-web.onrender.com
+      - key: STORAGE_TYPE
+        value: local
+      - key: STORAGE_LOCATION
+        value: /var/data/uploads
+      - key: SEED_ENABLED
+        value: "true"
+      - key: SEED_DEFAULT_PASSWORD
+        value: Password@123
+    # NOTE: Render disks require a paid plan. Uncomment to persist uploaded files.
+    # disk:
+    #   name: uploads
+    #   mountPath: /var/data
+    #   sizeGB: 1
+
+  # ---- Frontend (React static site) ----
+  - type: web
+    name: musiccollab-web
+    runtime: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://musiccollab-api.onrender.com/api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
